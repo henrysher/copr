@@ -17,3 +17,4 @@ decorator
 python-dateutil
 netaddr
 alembic
+flask-restful-swagger

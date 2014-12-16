@@ -1,3 +1,4 @@
+import copy
 import datetime
 import json
 
@@ -256,6 +257,14 @@ class Copr(db.Model, helpers.Serializer):
             return True
         return False
 
+    def to_dict(self, private=False, show_builds=True, show_chroots=True):
+        result = {}
+        for key in ["id", "name", "description", "instructions"]:
+            result[key] = str(copy.copy(getattr(self, key)))
+        result["owner"] = self.owner.name
+        return result
+
+
 class CoprPermission(db.Model, helpers.Serializer):
 
     """
@@ -501,6 +510,15 @@ class Build(db.Model, helpers.Serializer):
         else:
             return src_rpm_name
 
+    def to_dict(self, options=None):
+        result = super(Build, self).to_dict(options)
+        result["src_pkg"] = result["pkgs"]
+        del result["pkgs"]
+        del result["copr_id"]
+
+        result["state"] = self.state
+        return result
+
 
 class MockChroot(db.Model, helpers.Serializer):
 
@@ -544,6 +562,12 @@ class MockChroot(db.Model, helpers.Serializer):
         Textual representation of the operating system name
         """
         return "{0} {1}".format(self.os_release, self.os_version)
+
+    @property
+    def serializable_attributes(self):
+        attr_list = super(MockChroot, self).serializable_attributes
+        attr_list.extend(["name", "os"])
+        return attr_list
 
 
 class CoprChroot(db.Model, helpers.Serializer):
