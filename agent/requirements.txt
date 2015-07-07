@@ -1,0 +1,9 @@
+pytz
+python-dateutil
+aiohttp
+ipdb
+backports.typing
+
+tox
+pytest
+pytest-cov
