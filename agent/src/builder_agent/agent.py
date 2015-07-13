@@ -16,22 +16,6 @@ shared_state = {
     "build_id": 123455
 }
 
-class DateProtocol(asyncio.SubprocessProtocol):
-    def __init__(self, exit_future):
-        self.exit_future = exit_future
-        self.output = bytearray()
-
-    def pipe_data_received(self, fd, data):
-        log.info("data received: {}".format(len(data)))
-        self.output.extend(data)
-
-    def process_exited(self):
-        self.exit_future.set_result(True)
-
-    @property
-    def stdout(self):
-        return bytes(self.output).decode("utf-8")
-
 
 class Daemon(object):
     """
@@ -46,8 +30,7 @@ class Daemon(object):
         self.build_cmd = build_cmd
 
         self.build_started_on = None
-        self.build_transport = None
-        self.build_protocol = None
+        self.build_ended_on = None
         self.build_stdout = bytearray()
         self.build_stderr = bytearray()
         self.build_return_code = None
@@ -60,10 +43,6 @@ class Daemon(object):
         create = asyncio.create_subprocess_exec(
             *split(self.build_cmd), stdout=asyncio.subprocess.PIPE)
         self.build_proc = yield from create
-        # self.build_transport, self.build_protocol = yield from self.loop.subprocess_exec(
-        #     lambda: DateProtocol(self.exit_future),
-        #     sys.executable, '-c', code)
-        #     # *split(self.build_cmd))
         self.build_started_on = time.time()
 
         async(self.watcher())
@@ -71,7 +50,6 @@ class Daemon(object):
     @coroutine
     def watcher(self):
         while self.build_proc and not self.build_proc.stdout.at_eof():
-            # mb_new_data = yield from self.build_proc.stdout.read(4096)
             log.debug("trying to read stdout ...")
             mb_new_data = yield from self.build_proc.stdout.readline()
 
@@ -81,17 +59,23 @@ class Daemon(object):
             else:
                 yield from asyncio.sleep(1)
 
+        # import ipdb; ipdb.set_trace()
+        log.info("Build finished: {}".format(self.build_proc.returncode))
+        self.build_ended_on = time.time()
+
+    @coroutine
+    def finalize(self):
+        yield from self.build_proc.terminate()
+        yield from self.build_proc.wait()
+        self.build_proc = None
+
     @coroutine
     def cancel_build(self):
         if not self.build_proc:
             return web.Response(body="No running build to cancel", status=400)
         else:
             # yield from self.build_transport.terminate()
-            yield from self.build_proc.terminate()
-            yield from self.build_proc.wait()
-            self.build_proc = None
-            self.build_transport = None
-            self.build_protocol = None
+            yield from self.finalize()
             return web.Response(body="No running build to cancel", status=400)
 
     @coroutine
@@ -109,23 +93,24 @@ class Daemon(object):
             text = "Build started\n"
             return web.Response(body=text.encode('utf-8'))
 
-
     # @coroutine
     def status(self, request):
-        if not self.build_started_on:
+        if self.build_started_on is None:
             text = "No build started yet\n"
+        elif self.build_ended_on is not None:
+            text = "Build finished in {} seconds\n".format(self.build_ended_on - self.build_started_on)
         else:
             text = "Time elapsed: {}, latest build was started at: {}\n"\
                 .format(time.time() - self.build_started_on, self.build_started_on)
 
-        if self.exit_future is not None:
-            if self.exit_future.done():
-                text += "finished, return code: {}\n".format(
-                    self.build_transport.get_returncode())
+        try:
+            text += bytes(self.build_stdout).decode("utf-8")
+        except Exception:
+            log.exception("failed add stdout to output")
 
         # import ipdb; ipdb.set_trace()
-        if self.build_protocol:
-            text += "output: {}".format(self.build_protocol.stdout)
+        # if self.build_protocol:
+        #     text += "output: {}".format(self.build_protocol.stdout)
 
         # if self.build_return_code:
         #     text += "return code: {}".format(self.build_return_code)
@@ -152,6 +137,6 @@ class Daemon(object):
 
     def reset_results(self):
         self.build_started_on = None
-        self.build_stdout = b""
-        self.build_stderr = b""
+        self.build_stdout = bytearray()
+        self.build_stderr = bytearray()
         self.build_return_code = None
