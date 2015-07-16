@@ -167,6 +167,19 @@ class Copr(db.Model, helpers.Serializer):
     }
 
     @property
+    def yum_repos(self):
+        return {}
+        # todo: add config option to set backen results base url
+        # release_tmpl = "{chroot.os_release}-{chroot.os_version}-{chroot.arch}"
+        # result = {}
+        # for chroot in repo.active_chroots:
+        #     release = release_tmpl.format(chroot=chroot)
+        #     url = fix_protocol_for_backend(urlparse.urljoin(
+        #         app.config["BACKEND_RESULTS_BASE_URL"], release + '/'))
+        #     result[release] = url
+        # return result
+
+    @property
     def repos_list(self):
         """
         Return repos of this copr as a list of strings

@@ -341,7 +341,9 @@ listen(models.Copr.auto_createrepo, 'set', on_auto_createrepo_change,
 
 class CoprChrootsLogic(object):
     @classmethod
+
     def mock_chroots_from_names(cls, names):
+
         db_chroots = models.MockChroot.query.all()
         mock_chroots = []
         for ch in db_chroots:

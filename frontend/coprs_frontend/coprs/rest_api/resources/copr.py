@@ -1,25 +1,22 @@
 import base64
-import json
 import datetime
-import flask
-from flask import url_for
-from flask_restful import Resource, reqparse
 import functools
 
-from marshmallow import Schema, fields, pprint
+import flask
+from flask_restful import Resource, reqparse
+from marshmallow import pprint
 
 from coprs import db
 from coprs.exceptions import DuplicateException
 from coprs.logic.complex_logic import ComplexLogic
 from coprs.logic.users_logic import UsersLogic
-
 from coprs.logic.coprs_logic import CoprsLogic
-
 from coprs.exceptions import ActionInProgressException, InsufficientRightsException
 from .build import BuildListR
-
+from coprs.rest_api.schemas import CoprSchema
 from ..exceptions import ObjectAlreadyExists, AuthFailed
-from ..util import get_one_safe, json_loads_safe, mm_deserialize
+from ..util import get_one_safe, json_loads_safe, mm_deserialize, bp_url_for, render_allowed_method
+
 
 def rest_api_auth_required(f):
     @functools.wraps(f)
@@ -50,37 +47,6 @@ def rest_api_auth_required(f):
     return decorated_function
 
 
-class CoprSchema(Schema):
-    name = fields.Str(required=True)
-    description = fields.Str()
-    instructions = fields.Str()
-
-    auto_createrepo = fields.Bool()
-
-    chroots = fields.List(fields.Str, required=True)
-    repos = fields.List(fields.Str)
-
-    _keys_to_make_object = [
-        "description",
-        "instructions",
-        "auto_createrepo"
-    ]
-
-    def make_object(self, data):
-        """
-        Create kwargs for CoprsLogic.add
-        """
-        kwargs = dict(
-            name=data["name"].strip(),
-            repos=" ".join(data.get("repos", [])),
-            selected_chroots=data["chroots"],
-        )
-        for key in self._keys_to_make_object:
-            if key in data:
-                kwargs[key] = data[key]
-        return kwargs
-
-
 class CoprListR(Resource):
 
     @rest_api_auth_required
@@ -89,9 +55,9 @@ class CoprListR(Resource):
         Creates new copr
         """
         owner = flask.g.user
-        new_copr_dict = json_loads_safe(flask.request.data, "")
+        # new_copr_dict = json_loads_safe(flask.request.data, "")
 
-        result = mm_deserialize(CoprSchema(), new_copr_dict)
+        result = mm_deserialize(CoprSchema(), flask.request.data)
         # todo check that chroots are available
         pprint(result.data)
         try:
@@ -100,7 +66,7 @@ class CoprListR(Resource):
         except DuplicateException as error:
             raise ObjectAlreadyExists(data=error)
 
-        return copr.to_dict(), 201
+        return "New copr was created", 201
 
     def get(self):
         """
@@ -108,7 +74,6 @@ class CoprListR(Resource):
         :return:
         """
         parser = reqparse.RequestParser()
-
         parser.add_argument('owner', dest='username', type=str)
         parser.add_argument('limit', type=int)
         parser.add_argument('offset', type=int)
@@ -144,17 +109,29 @@ class CoprListR(Resource):
 
         return {
             "links": {
-                "self": url_for(CoprListR.endpoint, **req_args)
+                "self": bp_url_for(CoprListR.endpoint, **req_args)
             },
             "coprs": [
                 {
-                    "copr": copr.to_dict(),
-                    "link": url_for(CoprR.endpoint,
-                                    owner=copr.owner.name,
-                                    project=copr.name),
+                    "copr": CoprSchema().dump(copr)[0],
+                    "link": bp_url_for(
+                        CoprR.endpoint,
+                        owner=copr.owner.name,
+                        project=copr.name
+                    ),
                 }
                 for copr in coprs_list
-            ]
+            ],
+            # TODO: show only if user provided ?help=true param
+            # "allowed_methods": [
+            #     render_allowed_method("GET", "Get list of coprs", require_auth=False,
+            #                           params=[
+            #                               "username: filter coprs owned by user",
+            #                               "limit: show only the given number of coprs",
+            #                               "offset: skip given number of coprs",
+            #                           ]),
+            #     render_allowed_method("POST", "Creates new copr, send dict with copr fields"),
+            # ]
         }
 
 
@@ -176,24 +153,34 @@ class CoprR(Resource):
         return None, 204
 
     def get(self, owner, project):
-        parser = reqparse.RequestParser()
-        parser.add_argument('show_builds', type=bool, default=True)
-        parser.add_argument('show_chroots', type=bool, default=True)
-        req_args = parser.parse_args()
+        # parser = reqparse.RequestParser()
+        # parser.add_argument('show_builds', type=bool, default=True)
+        # parser.add_argument('show_chroots', type=bool, default=True)
+        # req_args = parser.parse_args()
 
         copr = get_one_safe(CoprsLogic.get(flask.g.user, owner, project),
                             "Copr {}/{} not found".format(owner, project))
         return {
+            "copr": CoprSchema().dump(copr)[0],
             "links": {
-                "self": url_for(CoprR.endpoint,
+                "self": bp_url_for(CoprR.endpoint,
                                 owner=owner,
                                 project=project),
                 # "chroots":
-                "builds": url_for(BuildListR.endpoint,
+                "builds": bp_url_for(BuildListR.endpoint,
                                   owner=copr.owner.name,
                                   project=copr.name)
             },
-            "copr": copr.to_dict()
+            # "allowed_methods": [
+            #     render_allowed_method("GET", "Get single copr", require_auth=False),
+            #     render_allowed_method("DELETE", "Delete current copr", require_auth=True),
+            # ]
         }
 
+    @rest_api_auth_required
+    def put(self, owner, project):
+        """
+        Modifies project by replacment of provided fields
+        """
+        pass
 

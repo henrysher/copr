@@ -18,26 +18,6 @@ class RootR(Resource):
     @swagger.operation(
         notes='List main API endpoints',
         nickname='get',
-        # Parameters can be automatically extracted from URLs (e.g. <string:id>)
-        # but you could also override them here, or add other parameters.
-        # parameters=[
-        #     {
-        #         "name": "todo_id_x",
-        #         "description": "The ID of the TODO item",
-        #         "required": True,
-        #         "allowMultiple": False,
-        #         "dataType": 'string',
-        #         "paramType": "path"
-        #     },
-        #     {
-        #         "name": "a_bool",
-        #         "description": "The ID of the TODO item",
-        #         "required": True,
-        #         "allowMultiple": False,
-        #         "dataType": 'boolean',
-        #         "paramType": "path"
-        #     }
-        # ]
     )
     def get(self):
         return {
@@ -81,17 +61,18 @@ api = MyApi(
 )
 
 ###################################
+# todo: maybe add later
 # Wrap the Api with swagger.docs. It is a thin wrapper around the Api class that adds some swagger smarts
-api = swagger.docs(
-    api,
-    # apiVersion='0.1',
-    # basePath=URL_PREFIX,
-    # resourcePath=URL_PREFIX,
-    # api_spec_url='{}/spec'.format(URL_PREFIX)
-    # api_spec_url='/spec',
-    # api_spec_url='{}/spec'.format(URL_PREFIX)
-    api_spec_url='/spec'
-)
+# api = swagger.docs(
+#     api,
+#     # apiVersion='0.1',
+#     # basePath=URL_PREFIX,
+#     # resourcePath=URL_PREFIX,
+#     # api_spec_url='{}/spec'.format(URL_PREFIX)
+#     # api_spec_url='/spec',
+#     # api_spec_url='{}/spec'.format(URL_PREFIX)
+#     api_spec_url='/spec'
+# )
 ###################################
 
 api.add_resource(RootR, "/")

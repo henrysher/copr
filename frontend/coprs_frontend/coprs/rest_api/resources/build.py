@@ -1,8 +1,9 @@
 # coding: utf-8
 
 import flask
-from flask import url_for
-from flask_restful_swagger import swagger
+
+# from flask_restful_swagger import swagger
+
 from coprs.logic.coprs_logic import CoprsLogic
 from coprs.logic.builds_logic import BuildsLogic
 
@@ -55,13 +56,14 @@ class BuildListR(Resource):
         }
 
 
-@swagger.model
-class BuildItem(object):
-    def __init__(self, build_id):
-        pass
+# @swagger.model
+# class BuildItem(object):
+#     def __init__(self, build_id):
+#         pass
 
 
 class BuildR(Resource):
+
     def get(self, build_id):
         """
         Get single build by id
