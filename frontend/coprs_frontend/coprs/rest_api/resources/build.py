@@ -7,6 +7,8 @@ import flask
 from coprs.logic.coprs_logic import CoprsLogic
 from coprs.logic.builds_logic import BuildsLogic
 
+from coprs.rest_api.schemas import BuildSchema
+
 from coprs.rest_api.util import get_one_safe, bp_url_for
 
 from flask_restful import Resource, reqparse
@@ -44,15 +46,16 @@ class BuildListR(Resource):
 
         builds = query.all()
         return {
+
+            "builds": [
+                {
+                    "build": BuildSchema().dump(build)[0],
+                    "link": bp_url_for(BuildR.endpoint, build_id=build.id),
+                } for build in builds
+            ],
             "links": {
                 "self": bp_url_for(BuildListR.endpoint, **req_args),
             },
-            "builds": [
-                {
-                    "build": build.to_dict(),
-                    "link": bp_url_for(BuildR.endpoint, build_id=build.id),
-                } for build in builds
-            ]
         }
 
 
@@ -71,10 +74,10 @@ class BuildR(Resource):
         build = get_one_safe(BuildsLogic.get(build_id),
                              "Not found build with id: {}".format(build_id))
         return {
-            "build": build.to_dict(),
+            "build": BuildSchema().dump(build)[0],
             "links": {
                 "self": bp_url_for(BuildR.endpoint, build_id=build_id),
-                # TODO: can't do it due to circular imports
+                # TODO: can't do this due to circular imports
                 # "parent_copr": url_for(CoprR.endpoint,
                 #                        owner=build.copr.owner.name,
                 #                        project=build.copr.name),

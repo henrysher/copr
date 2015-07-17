@@ -20,6 +20,7 @@ class CoprSchema(Schema):
 
     auto_createrepo = fields.Bool()
     build_enable_net = fields.Bool()
+    last_modified = fields.DateTime()
 
     additional_repos = fields.List(fields.Str, dump_only=True, attribute="repos_list")
     # yum_repos  = fields.List()
@@ -46,4 +47,41 @@ class CoprSchema(Schema):
             if key in data:
                 kwargs[key] = data[key]
         return kwargs
+
+
+class BuildChrootSchema(Schema):
+    # used only for presentation
+    state = fields.Str()
+    started_on = fields.Int()
+    ended_on = fields.Int()
+    git_hash = fields.Str()
+
+
+class BuildSchema(Schema):
+
+    id = fields.Int()
+    pkgs = fields.Str()
+    build_packages = fields.Str()
+    pkg_version = fields.Str()
+
+    repos_list = fields.List(fields.Str())
+    repos = fields.Str()  # legacy
+
+    submitted_on = fields.Int()
+    started_on = fields.Int()
+    ended_on = fields.Int()
+
+    results = fields.Str()
+    memory_reqs = fields.Int()
+    timeout = fields.Int()
+
+    enable_net = fields.Bool()
+
+    source_type = fields.Int()
+    source_json = fields.Str()
+
+    # chroots = fields.List(fields.Nested(BuildChrootSchema))
+
+
+
 

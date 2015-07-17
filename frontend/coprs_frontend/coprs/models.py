@@ -372,6 +372,13 @@ class Build(db.Model, helpers.Serializer):
     chroots = association_proxy("build_chroots", "mock_chroot")
 
     @property
+    def repos_list(self):
+        if self.repos is None:
+            return list()
+        else:
+            return self.repos.split()
+
+    @property
     def result_dir_name(self):
         return "{:08d}-{}".format(self.id, self.package.name)
 
