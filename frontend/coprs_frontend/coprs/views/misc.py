@@ -50,6 +50,11 @@ def krb_strip_realm(fullname):
     return re.sub(r'@.*', '', fullname)
 
 
+@app.before_app_request
+def set_empty_user():
+    flask.g.user = None
+
+
 @app.before_request
 def lookup_current_user():
     flask.g.user = username = None

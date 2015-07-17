@@ -17,5 +17,6 @@ decorator
 python-dateutil
 netaddr
 alembic
-# flask-restful-swagger -- nice to have, but probably later
+flask-restful
+# flask-restful-swagger # -- nice to have, but probably later
 marshmallow
