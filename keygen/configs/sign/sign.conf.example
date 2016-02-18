@@ -1,3 +1,0 @@
-allow: 127.16.5.5
-phrases: /var/lib/copr-keygen/phrases
-gpg: /bin/gpg_copr
